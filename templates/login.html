@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — EduAI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="public">
+    <div class="auth-wrap">
+        <div class="card auth-card">
+            <a class="brand" href="{{ url_for('welcome') }}" style="color:#0f172a;padding:0;">
+                <span class="brand-mark">E</span>
+                EduAI
+            </a>
+            <h1>Welcome back</h1>
+            <p class="muted">Sign in to view predictions, history, and AI insights.</p>
+            <form method="POST" class="stack">
+                {% if error %}
+                <div class="alert alert-error">{{ error }}</div>
+                {% endif %}
+                <div class="field">
+                    <label for="email">Email</label>
+                    <input id="email" type="email" name="email" placeholder="you@college.edu" required>
+                </div>
+                <div class="field">
+                    <label for="password">Password</label>
+                    <input id="password" type="password" name="password" placeholder="Enter your password" required>
+                </div>
+                <button class="btn btn-primary btn-block" type="submit">Login</button>
+                <p class="muted" style="text-align:center;">Need an account? <a href="{{ url_for('register') }}" style="color:#4f46e5;font-weight:600;">Register</a></p>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

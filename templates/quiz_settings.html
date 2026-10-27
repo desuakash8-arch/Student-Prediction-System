@@ -1,0 +1,133 @@
+
+{% extends "base.html" %}
+{% block title %}Quiz Settings — EduAI{% endblock %}
+{% block page_title %}Quiz Settings{% endblock %}
+{% block page_subtitle %}Customize your practice session{% endblock %}
+
+{% block content %}
+<section class="card card-pad">
+    <h2>Configure your quiz</h2>
+    <p class="muted">Your selected subject and topics will be used to create your quiz.</p>
+
+    <div id="selectedTopics" class="selection-summary">
+        Loading your selected topics...
+    </div>
+
+    <form id="quizSettingsForm">
+        <div class="field">
+            <label for="questionCount">Number of questions</label>
+            <select id="questionCount">
+                <option value="5">5 questions</option>
+                <option value="10" selected>10 questions</option>
+                <option value="15">15 questions</option>
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="difficulty">Difficulty</label>
+            <select id="difficulty">
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate" selected>Intermediate</option>
+                <option value="Advanced">Advanced</option>
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="duration">Time limit</label>
+            <select id="duration">
+                <option value="5">5 minutes</option>
+                <option value="10" selected>10 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+            </select>
+        </div>
+
+        <p id="settingsError" class="alert alert-error" hidden></p>
+
+        <button type="submit" class="btn btn-primary" id="startQuizBtn">
+            Generate and start quiz →
+        </button>
+        <a href="{{ url_for('quiz_page') }}" class="btn btn-secondary">
+            Back to topics
+        </a>
+    </form>
+</section>
+
+<script>
+(() => {
+    const saved = sessionStorage.getItem("eduaiQuizTopicSelection");
+    const display = document.getElementById("selectedTopics");
+    const error = document.getElementById("settingsError");
+    const form = document.getElementById("quizSettingsForm");
+    const button = document.getElementById("startQuizBtn");
+
+    let selection;
+
+    try {
+        selection = saved ? JSON.parse(saved) : null;
+    } catch {
+        selection = null;
+    }
+
+    if (
+        !selection ||
+        !selection.subject ||
+        !Array.isArray(selection.topics) ||
+        selection.topics.length === 0
+    ) {
+        display.textContent = "No topics selected. Please return and choose your topics.";
+        button.disabled = true;
+        return;
+    }
+
+    display.replaceChildren();
+
+    const heading = document.createElement("strong");
+    heading.textContent = selection.subject;
+    display.appendChild(heading);
+
+    const list = document.createElement("ul");
+    selection.topics.forEach(topic => {
+        const item = document.createElement("li");
+        item.textContent = topic;
+        list.appendChild(item);
+    });
+    display.appendChild(list);
+
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+        error.hidden = true;
+        button.disabled = true;
+        button.textContent = "Generating your quiz…";
+
+        try {
+            const response = await fetch("{{ url_for('generate_quiz') }}", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    subject: selection.subject,
+                    topics: selection.topics,
+                    question_count: Number(document.getElementById("questionCount").value),
+                    difficulty: document.getElementById("difficulty").value,
+                    duration: Number(document.getElementById("duration").value)
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Could not generate the quiz.");
+            }
+
+            sessionStorage.setItem("eduaiActiveQuiz", JSON.stringify(data));
+            window.location.href = "{{ url_for('take_quiz_page') }}";
+        } catch (err) {
+            error.textContent = err.message || "Something went wrong.";
+            error.hidden = false;
+            button.disabled = false;
+            button.textContent = "Generate and start quiz →";
+        }
+    });
+})();
+</script>
+{% endblock %}

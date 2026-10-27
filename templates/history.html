@@ -1,0 +1,188 @@
+
+{% extends "base.html" %}
+
+{% block title %}History — EduAI{% endblock %}
+{% block page_title %}Prediction History{% endblock %}
+{% block page_subtitle %}Your saved performance predictions{% endblock %}
+
+{% block top_actions %}
+<a class="btn btn-primary" href="{{ url_for('predict_page') }}">
+    New Prediction
+</a>
+{% endblock %}
+
+{% block content %}
+
+{% if history %}
+
+<!-- Prediction History Chart -->
+<section class="card history-chart-card">
+    <h3>Recent 5  Predictions</h3>
+    <p class="muted">Track your prediction scores over time.</p>
+
+    <div class="history-chart-container">
+        <canvas id="predictionHistoryChart"></canvas>
+    </div>
+</section>
+
+<!-- Prediction History Table -->
+<section class="card">
+    <div class="table-wrap">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Date / Time</th>
+                    <th>Score</th>
+                    <th>Category</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for item in history %}
+                <tr>
+                    <td>{{ item.created_at or "—" }}</td>
+
+                    <td>
+                        <strong>{{ item.prediction }}%</strong>
+                    </td>
+
+                    <td>
+                        <span class="badge {{ item.category_tone }}">
+                            {{ item.category }}
+                        </span>
+                    </td>
+
+                    <td style="text-align: right;">
+                        <a
+                            class="btn btn-secondary"
+                            href="{{ url_for('result_page', prediction_id=item.id) }}"
+                        >
+                            View Result
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% else %}
+
+<!-- Empty History State -->
+<section class="card">
+    <div class="empty">
+        <h3>No Predictions Yet</h3>
+        <p>Make your first prediction to see your history and graph here.</p>
+
+        <div style="margin-top: 14px;">
+            <a class="btn btn-primary" href="{{ url_for('predict_page') }}">
+                Predict Now
+            </a>
+        </div>
+    </div>
+</section>
+
+{% endif %}
+
+<!-- Prediction History Line Graph -->
+{% if history %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const canvas = document.getElementById("predictionHistoryChart");
+
+    if (!canvas) {
+        return;
+    }
+
+    if (typeof Chart === "undefined") {
+        console.error(
+            "Chart.js is not loaded. Check the Chart.js script in base.html."
+        );
+        return;
+    }
+
+    const labels = {{ chart_labels | default([], true) | tojson }};
+    const scores = {{ chart_scores | default([], true) | tojson }};
+
+    if (!labels.length || !scores.length) {
+        console.warn(
+            "No chart data available. Check history_page in app.py."
+        );
+        return;
+    }
+
+    new Chart(canvas, {
+        type: "line",
+
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Prediction Score (%)",
+                data: scores,
+
+                borderColor: "#635bdb",
+                backgroundColor: "rgba(99, 91, 219, 0.12)",
+
+                borderWidth: 3,
+                fill: true,
+                tension: 0.35,
+
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: "#635bdb",
+                pointBorderColor: "#ffffff",
+                pointBorderWidth: 2
+            }]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+
+            interaction: {
+                intersect: false,
+                mode: "index"
+            },
+
+            plugins: {
+                legend: {
+                    display: true,
+                    position: "top"
+                },
+
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return "Score: " + context.parsed.y + "%";
+                        }
+                    }
+                }
+            },
+
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+
+                    title: {
+                        display: true,
+                        text: "Prediction Score (%)"
+                    }
+                },
+
+                x: {
+                    title: {
+                        display: true,
+                        text: "Date and Time"
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+
+{% endblock %}

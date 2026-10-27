@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% block title %}AI Quiz Builder — EduAI{% endblock %}
+{% block page_title %}AI Quiz Builder{% endblock %}
+{% block page_subtitle %}Choose what you want to practise{% endblock %}
+{% block content %}
+<section class="quiz-hero">
+    <span class="badge info">AI-powered learning</span>
+    <h1>Build a quiz around <span>your goals.</span></h1>
+    <p>Enter any subject. EduAI will suggest topics, and you decide what belongs in your quiz.</p>
+</section>
+
+<section class="card card-pad quiz-builder">
+    <div class="step-heading">
+        <span class="step-number">1</span>
+        <div><h2>What subject are you learning?</h2><p class="muted">Try Python, SQL, Java, statistics, or a subject of your choice.</p></div>
+    </div>
+    <form id="subjectForm" class="subject-form">
+        <div class="field">
+            <label for="subjectInput">Subject</label>
+            <input id="subjectInput" name="subject" maxlength="100" placeholder="e.g. Python Programming" required>
+        </div>
+        <button class="btn btn-primary" id="generateTopicsBtn" type="submit"><span>✦</span> Generate topics</button>
+    </form>
+    <div id="topicStatus" aria-live="polite"></div>
+    <section id="topicsSection" class="topics-section" hidden>
+        <div class="topics-heading">
+            <div class="step-heading">
+                <span class="step-number">2</span>
+                <div><h2>Choose your topics</h2><p class="muted">Select one, several, or all. You can also add a topic of your own.</p></div>
+            </div>
+            <div class="topic-actions">
+                <button class="btn btn-secondary btn-small" type="button" id="selectAllBtn">Select all</button>
+                <button class="btn btn-ghost btn-small" type="button" id="clearTopicsBtn">Clear</button>
+            </div>
+        </div>
+        <div id="topicChips" class="topic-chips"></div>
+        <form id="customTopicForm" class="custom-topic-form">
+            <label class="sr-only" for="customTopicInput">Add your own topic</label>
+            <input id="customTopicInput" maxlength="80" placeholder="Add a topic not listed…">
+            <button class="btn btn-secondary" type="submit">+ Add topic</button>
+        </form>
+        <div class="selection-footer">
+            <span id="selectionCount" class="muted">0 topics selected</span>
+            <button class="btn btn-primary" type="button" id="continueBtn" disabled>Continue with selected topics →</button>
+        </div>
+        <div id="selectionSummary" class="selection-summary" hidden></div>
+    </section>
+</section>
+
+<section class="card card-pad document-quiz-card">
+    <div class="step-heading">
+        <span class="step-number">✦</span>
+        <div>
+            <h2>Turn your document into a quiz</h2>
+            <p class="muted">
+                Upload study notes, a chapter, or a handout. EduAI will
+                create questions based on the document.
+            </p>
+        </div>
+    </div>
+
+    <form id="documentQuizForm" class="document-quiz-form">
+        <div class="field">
+            <label for="quizDocument">Study document</label>
+            <input
+                id="quizDocument"
+                name="document"
+                type="file"
+                accept=".pdf,.docx,.txt"
+                required
+            >
+            <span class="hint">PDF, DOCX, or TXT · Maximum 10 MB</span>
+        </div>
+
+        <div class="document-settings">
+            <div class="field">
+                <label for="documentQuestionCount">Questions</label>
+                <select id="documentQuestionCount" name="question_count">
+                    <option value="5">5 questions</option>
+                    <option value="10">10 questions</option>
+                    <option value="15">15 questions</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="documentDifficulty">Difficulty</label>
+                <select id="documentDifficulty" name="difficulty">
+                    <option>Beginner</option>
+                    <option selected>Intermediate</option>
+                    <option>Advanced</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="documentDuration">Time limit</label>
+                <select id="documentDuration" name="duration">
+                    <option value="5">5 minutes</option>
+                    <option value="10" selected>10 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                </select>
+            </div>
+        </div>
+
+        <button
+            class="btn btn-primary"
+            id="documentQuizBtn"
+            type="submit"
+        >
+            Generate quiz from document
+        </button>
+
+        <div
+            id="documentQuizStatus"
+            class="document-quiz-status"
+            aria-live="polite"
+            hidden
+        ></div>
+    </form>
+</section>
+
+<div class="quiz-note"><strong>How it works</strong><p>Topic suggestions are generated by AI and may need review. In the next step, the selected topics will be used to create your timed quiz.</p></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  
+  const documentForm = document.getElementById("documentQuizForm");
+  const documentInput = document.getElementById("quizDocument");
+  const documentBtn = document.getElementById("documentQuizBtn");
+  const documentStatus = document.getElementById("documentQuizStatus");
+
+  documentForm.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const file = documentInput.files[0];
+
+    if (!file) {
+      documentStatus.hidden = false;
+      documentStatus.className = "alert alert-error";
+      documentStatus.textContent = "Choose a document first.";
+      return;
+    }
+
+    const allowed = /\.(pdf|docx|txt)$/i.test(file.name);
+
+    if (!allowed) {
+      documentStatus.hidden = false;
+      documentStatus.className = "alert alert-error";
+      documentStatus.textContent = "Choose a PDF, DOCX, or TXT file.";
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      documentStatus.hidden = false;
+      documentStatus.className = "alert alert-error";
+      documentStatus.textContent = "The document must be smaller than 10 MB.";
+      return;
+    }
+
+    const formData = new FormData(documentForm);
+
+    documentBtn.disabled = true;
+    documentBtn.textContent = "Reading document and generating questions…";
+    documentStatus.hidden = false;
+    documentStatus.className = "alert alert-info";
+    documentStatus.textContent =
+      "Please wait while EduAI reads your document and creates the quiz.";
+
+    try {
+      const response = await fetch(
+        "{{ url_for('generate_document_quiz') }}",
+        {
+          method: "POST",
+          body: formData
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not generate the document quiz.");
+      }
+
+      // The take-quiz page reads questions from sessionStorage.
+      const activeQuiz = {
+        subject: data.subject,
+        topics: data.topics,
+        difficulty: data.difficulty,
+        duration: data.duration,
+        questions: data.questions
+      };
+
+      sessionStorage.setItem(
+        "eduaiActiveQuiz",
+        JSON.stringify(activeQuiz)
+      );
+
+      window.location.href = "{{ url_for('take_quiz_page') }}";
+    } catch (err) {
+      documentStatus.className = "alert alert-error";
+      documentStatus.textContent =
+        err.message || "Could not generate the quiz. Please try again.";
+    } finally {
+      documentBtn.disabled = false;
+      documentBtn.textContent = "Generate quiz from document";
+    }
+  });
+
+(() => {
+  const form = document.getElementById("subjectForm");
+  const subjectInput = document.getElementById("subjectInput");
+  const generateBtn = document.getElementById("generateTopicsBtn");
+  const status = document.getElementById("topicStatus");
+  const section = document.getElementById("topicsSection");
+  const chips = document.getElementById("topicChips");
+  const count = document.getElementById("selectionCount");
+  const continueBtn = document.getElementById("continueBtn");
+  const summary = document.getElementById("selectionSummary");
+  const selected = new Set();
+  let topicList = [];
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+  }
+  function updateSelection() {
+    const chosen = [...selected];
+    count.textContent = `${chosen.length} topic${chosen.length === 1 ? "" : "s"} selected`;
+    continueBtn.disabled = chosen.length === 0;
+    summary.hidden = chosen.length === 0;
+    summary.innerHTML = chosen.length ? `<strong>Ready to practise:</strong> ${chosen.map(escapeHtml).join(", ")}<p class="muted">Your selection is ready. Quiz settings and question generation will be added in the next implementation step.</p>` : "";
+  }
+  function renderTopics() {
+    chips.innerHTML = topicList.map(topic => {
+      const checked = selected.has(topic);
+      return `<label class="topic-chip ${checked ? "selected" : ""}"><input type="checkbox" value="${escapeHtml(topic)}" ${checked ? "checked" : ""}><span class="topic-check">${checked ? "✓" : "+"}</span><span>${escapeHtml(topic)}</span></label>`;
+    }).join("");
+    chips.querySelectorAll("input").forEach(input => input.addEventListener("change", () => {
+      const topic = input.value;
+      if (input.checked) selected.add(topic); else selected.delete(topic);
+      renderTopics();
+      updateSelection();
+    }));
+    updateSelection();
+  }
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const subject = subjectInput.value.trim();
+    if (!subject) return;
+    generateBtn.disabled = true;
+    generateBtn.textContent = "Generating topics…";
+    status.className = "alert alert-info";
+    status.textContent = `Asking AI for topics in ${subject}…`;
+    section.hidden = true;
+    summary.hidden = true;
+    selected.clear();
+    try {
+      const response = await fetch("{{ url_for('generate_quiz_topics') }}", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({subject})
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not generate topics.");
+      topicList = data.topics;
+      status.className = "alert alert-info";
+      status.textContent = `Generated ${topicList.length} topics for ${data.subject}. Select what you want to practise.`;
+      section.hidden = false;
+      renderTopics();
+    } catch (error) {
+      status.className = "alert alert-error";
+      status.textContent = error.message || "Something went wrong. Please try again.";
+    } finally {
+      generateBtn.disabled = false;
+      generateBtn.innerHTML = "<span>✦</span> Generate topics";
+    }
+  });
+  document.getElementById("selectAllBtn").addEventListener("click", () => {
+    topicList.forEach(topic => selected.add(topic));
+    renderTopics();
+  });
+  document.getElementById("clearTopicsBtn").addEventListener("click", () => {
+    selected.clear();
+    renderTopics();
+  });
+  document.getElementById("customTopicForm").addEventListener("submit", event => {
+    event.preventDefault();
+    const input = document.getElementById("customTopicInput");
+    const topic = input.value.trim();
+    if (!topic) return;
+    if (topicList.some(item => item.toLowerCase() === topic.toLowerCase())) {
+      status.className = "alert alert-info";
+      status.textContent = "That topic is already in the list.";
+      return;
+    }
+    topicList.push(topic);
+    selected.add(topic);
+    input.value = "";
+    renderTopics();
+  });
+  continueBtn.addEventListener("click", () => {
+    const payload = {
+        subject: subjectInput.value.trim(),
+        topics: [...selected]
+    };
+
+    if (!payload.subject || payload.topics.length === 0) {
+        status.className = "alert alert-error";
+        status.textContent = "Please enter a subject and select at least one topic.";
+        return;
+    }
+
+    sessionStorage.setItem(
+        "eduaiQuizTopicSelection",
+        JSON.stringify(payload)
+    );
+
+    window.location.href = "{{ url_for('quiz_settings_page') }}";
+});
+
+})();
+</script>
+{% endblock %}

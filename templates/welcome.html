@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduAI — Student Performance Analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="public">
+    <header class="public-nav">
+        <a class="brand" href="{{ url_for('welcome') }}" style="color:#0f172a;padding:0;">
+            <span class="brand-mark">E</span>
+            EduAI
+        </a>
+        <div style="display:flex;gap:8px;">
+            <a class="btn btn-secondary" href="{{ url_for('login') }}">Login</a>
+            <a class="btn btn-primary" href="{{ url_for('register') }}">Register</a>
+        </div>
+    </header>
+
+    <section class="hero">
+        <span class="badge info">AI-powered academic analytics</span>
+        <h1>Predict student performance with clarity and confidence.</h1>
+        <p>EduAI turns attendance, study habits, and academic signals into an actionable performance score, recommendations, and AI insights.</p>
+        <div class="hero-actions">
+            <a class="btn btn-primary" href="{{ url_for('login') }}">Get started</a>
+            <a class="btn btn-secondary" href="{{ url_for('register') }}">Create account</a>
+        </div>
+    </section>
+
+    <section class="feature-row">
+        <article class="card card-pad feature">
+            <span class="badge neutral">Analysis</span>
+            <h3>Performance prediction</h3>
+            <p>Submit nine academic indicators and receive a predicted score with a clear performance category.</p>
+        </article>
+        <article class="card card-pad feature">
+            <span class="badge neutral">Guidance</span>
+            <h3>Actionable recommendations</h3>
+            <p>See focused next steps for attendance, study time, sleep, and assignments — not generic advice.</p>
+        </article>
+        <article class="card card-pad feature">
+            <span class="badge neutral">Assistant</span>
+            <h3>EduAI Assistant</h3>
+            <p>Ask questions about your latest result and receive structured AI insights you can act on immediately.</p>
+        </article>
+    </section>
+</body>
+</html>

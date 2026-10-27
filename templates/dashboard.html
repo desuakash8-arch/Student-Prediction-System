@@ -1,0 +1,404 @@
+
+{% extends "base.html" %}
+{% block title %}Dashboard — EduAI{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Latest prediction and academic overview{% endblock %}
+
+{% block top_actions %}
+<a class="btn btn-primary" href="{{ url_for('predict_page') }}">New prediction</a>
+{% endblock %}
+
+{% block content %}
+{% set data = result.data if result and result.data else [0,0,0,0,0,0,0,0,0] %}
+{% set has_result = result and result.id %}
+{% set score = result.prediction if result else 0 %}
+{% set circ = 439.82 %}
+{% set dash = (score|float / 100) * circ %}
+
+{% if not has_result %}
+<section class="card card-pad empty">
+    <h2>Welcome to EduAI</h2>
+    <p>No predictions yet. Submit your academic metrics to generate a performance score, recommendations, and AI insights.</p>
+    <div style="margin-top:16px;">
+        <a class="btn btn-primary" href="{{ url_for('predict_page') }}">Start prediction</a>
+    </div>
+</section>
+{% else %}
+
+<div class="grid grid-3" style="margin-bottom:18px;">
+    <article class="card score-card">
+        <div class="gauge">
+            <svg width="168" height="168" viewBox="0 0 180 180" aria-hidden="true">
+                <circle cx="90" cy="90" r="70" fill="none" stroke="#e2e8f0" stroke-width="12"></circle>
+                <circle cx="90" cy="90" r="70" fill="none" stroke="#4f46e5" stroke-width="12" stroke-linecap="round" stroke-dasharray="{{ dash }} {{ circ }}"></circle>
+            </svg>
+            <div class="gauge-center">
+                <strong>{{ score }}%</strong>
+                <span>Score</span>
+            </div>
+        </div>
+        <div>
+            <p class="stat-label">Latest performance</p>
+            <h2 style="font-size:22px;margin:6px 0;">{{ result.category }}</h2>
+            <span class="badge {{ result.category_tone }}">{{ result.category }}</span>
+            {% if result.created_at %}
+            <p class="stat-note">Recorded {{ result.created_at }}</p>
+            {% endif %}
+        </div>
+    </article>
+
+    <article class="card stat">
+        <p class="stat-label">Attendance</p>
+        <p class="stat-value">{{ data[0] }}%</p>
+        <p class="stat-note">Class presence from latest input</p>
+    </article>
+
+    <article class="card stat">
+        <p class="stat-label">Assignments</p>
+        <p class="stat-value">{{ data[5] }}%</p>
+        <p class="stat-note">Assignment score from latest input</p>
+    </article>
+</div>
+
+<div class="grid grid-2">
+    <div class="grid">
+        <section class="card card-pad">
+            <div class="card-title">Recommendations</div>
+
+            {% for tip in result.suggestions %}
+            <div class="tip">
+                <div class="tip-icon">{{ loop.index }}</div>
+                <div>
+                    <h4>{{ tip }}</h4>
+                    <p>Based on your submitted study and lifestyle metrics.</p>
+                </div>
+            </div>
+            {% else %}
+            <p class="muted">No recommendations for this result.</p>
+            {% endfor %}
+        </section>
+
+        <section class="card card-pad">
+            <div class="card-title">
+                AI Performance Insights
+                <a class="btn btn-secondary" href="{{ url_for('chatbot_page') }}">Open assistant</a>
+            </div>
+            <div id="aiSuggestions" data-has-result="true"></div>
+        </section>
+    </div>
+
+    <!-- Quiz Performance replaces the old Performance mix chart -->
+    <section class="card card-pad quiz-performance-card">
+        <div class="card-title quiz-card-heading">
+            <span>Quiz Performance</span>
+            <a class="btn btn-secondary"
+               href="{{ url_for('quiz_history_page') }}">
+                View History
+            </a>
+        </div>
+
+        <p class="quiz-subtitle">
+            Your academic progress by quiz topic
+        </p>
+
+        {% if student %}
+        <div class="quiz-student-details">
+            <div class="quiz-detail-item">
+                <span>Student name</span>
+                <strong>{{ student.username }}</strong>
+            </div>
+            <div class="quiz-detail-item">
+                <span>Email</span>
+                <strong>{{ student.email }}</strong>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="quiz-summary-grid">
+            <div class="quiz-summary-box">
+                <span>Quizzes completed</span>
+                <strong>{{ quiz_stats.total }}</strong>
+            </div>
+
+            <div class="quiz-summary-box">
+                <span>Average score</span>
+                <strong>{{ quiz_stats.average }}%</strong>
+            </div>
+
+            <div class="quiz-summary-box">
+                <span>Best score</span>
+                <strong>{{ quiz_stats.best }}%</strong>
+            </div>
+        </div>
+
+        <div class="quiz-chart-header">
+            <h3>Average score by topic</h3>
+            <span>Click a topic to review</span>
+        </div>
+
+        {% if performance %}
+  
+{% if performance %}
+    <div class="quiz-topic-chart">
+        {% for item in performance %}
+        <a class="quiz-topic-row"
+           href="{{ url_for('quiz_history_page', topic=item.topic) }}">
+
+            <div class="quiz-topic-label">
+                <span>{{ item.topic }}</span>
+                <strong>{{ item.score }}%</strong>
+            </div>
+
+            <div class="quiz-bar-track">
+                <div class="quiz-bar-fill"
+                     style="width: {{ item.score|float|round(1) }}%;">
+                </div>
+            </div>
+
+            <small>
+                {{ item.attempts }} attempt(s) ·
+                <span class="quiz-topic-action">View history →</span>
+            </small>
+        </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="quiz-empty">
+        <div class="quiz-empty-icon">▤</div>
+        <h3>No quizzes completed yet</h3>
+        <p>Complete your first quiz to see your topic-wise performance here.</p>
+        <a class="btn btn-primary" href="{{ url_for('quiz_page') }}">
+            Start a Quiz
+        </a>
+    </div>
+{% endif %}
+
+        {% else %}
+        <div class="quiz-empty">
+            <div class="quiz-empty-icon">▤</div>
+            <h3>No quizzes completed yet</h3>
+            <p>Complete your first quiz to see your topic-wise performance here.</p>
+            <a class="btn btn-primary" href="{{ url_for('quiz_page') }}">
+                Start a Quiz
+            </a>
+        </div>
+        {% endif %}
+
+        <a class="quiz-all-history"
+           href="{{ url_for('quiz_history_page') }}">
+            See all quiz attempts →
+        </a>
+    </section>
+</div>
+
+{% endif %}
+
+<style>
+.quiz-performance-card {
+    min-width: 0;
+    align-self: start;
+}
+
+.quiz-card-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.quiz-subtitle {
+    margin: 4px 0 20px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.quiz-student-details {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.quiz-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border: 1px solid #e8edf5;
+    border-radius: 11px;
+    min-width: 0;
+}
+
+.quiz-detail-item span,
+.quiz-summary-box span {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.quiz-detail-item strong {
+    color: #172033;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.quiz-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+    margin-bottom: 26px;
+}
+
+.quiz-summary-box {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 13px 10px;
+    border-radius: 12px;
+    background: #f5f3ff;
+    min-width: 0;
+}
+
+.quiz-summary-box strong {
+    color: #4f46e5;
+    font-size: 23px;
+    overflow-wrap: anywhere;
+}
+
+.quiz-chart-header {
+    margin-bottom: 12px;
+}
+
+.quiz-chart-header h3 {
+    font-size: 15px;
+    margin: 0 0 5px;
+}
+
+.quiz-chart-header > span {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.quiz-topic-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.quiz-topic-row {
+    display: block;
+    color: #172033;
+    text-decoration: none;
+    padding: 12px 10px;
+    border-radius: 11px;
+    transition: background 0.18s ease;
+}
+
+.quiz-topic-row:hover {
+    background: #f5f3ff;
+}
+
+.quiz-topic-label {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 9px;
+    font-size: 13px;
+}
+
+.quiz-topic-label span {
+    overflow-wrap: anywhere;
+}
+
+.quiz-topic-label strong {
+    color: #4f46e5;
+    white-space: nowrap;
+}
+
+.quiz-bar-track {
+    height: 10px;
+    width: 100%;
+    overflow: hidden;
+    background: #e8edf5;
+    border-radius: 20px;
+    margin-bottom: 8px;
+}
+
+.quiz-bar-fill {
+    height: 100%;
+    background: #5145e5;
+    border-radius: 20px;
+    transition: width 0.3s ease;
+}
+
+.quiz-topic-row small {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.quiz-topic-action {
+    color: #4f46e5;
+    font-weight: 600;
+}
+
+.quiz-empty {
+    text-align: center;
+    padding: 25px 8px;
+}
+
+.quiz-empty-icon {
+    font-size: 32px;
+    color: #4f46e5;
+}
+
+.quiz-empty h3 {
+    font-size: 16px;
+    margin: 12px 0 8px;
+}
+
+.quiz-empty p {
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.quiz-empty .btn {
+    display: inline-flex;
+    margin-top: 8px;
+}
+
+.quiz-all-history {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 17px;
+    border-top: 1px solid #e8edf5;
+    color: #4f46e5;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.quiz-all-history:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+    .quiz-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .quiz-summary-box {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .quiz-card-heading {
+        align-items: flex-start;
+    }
+}
+</style>
+
+{% endblock %}

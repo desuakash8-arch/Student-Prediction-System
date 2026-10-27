@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}AI Assistant — EduAI{% endblock %}
+{% block page_title %}AI Assistant{% endblock %}
+{% block page_subtitle %}Personalized guidance from your latest prediction{% endblock %}
+
+{% block content %}
+<section class="card assistant">
+    <header class="assistant-head">
+        <div class="assistant-ident">
+            <div class="ai-orb">AI</div>
+            <div>
+                <strong>EduAI Assistant</strong>
+                <div class="muted" style="font-size:12px;"><span class="status-dot"></span>Powered by AI</div>
+            </div>
+        </div>
+        {% if result and result.id %}
+        <span class="badge info">Latest score {{ result.prediction }}%</span>
+        {% else %}
+        <span class="badge warning">No prediction yet</span>
+        {% endif %}
+    </header>
+
+    <div class="chat-log" id="chatLog">
+        <!-- Interactive Bot Welcome Module -->
+        <div class="bubble bot">
+            <p><strong>Welcome back! 👋</strong> I'm your academic copilot. I can analyze your latest performance, generate custom study blocks, or optimize your weekly routine.</p>
+            
+            <div class="suggestion-header">What would you like to build first?</div>
+            <div class="chip-container">
+                <button class="prompt-chip" onclick="quickPrompt('📅 Generate a high-performance weekly study timetable tailored to my toughest subjects')">
+                    <i class="far fa-calendar-alt"></i> Generate Timetable
+                </button>
+                <button class="prompt-chip" onclick="quickPrompt('✍️ Create a revision plan and flashcards for my upcoming exams')">
+                    <i class="fas fa-pen-nib"></i> Revision Plan
+                </button>
+                <button class="prompt-chip" onclick="quickPrompt('📈 Analyze my academic metrics and suggest optimizations for my study routine')">
+                    <i class="fas fa-chart-line"></i> Optimize Routine
+                </button>
+            </div>
+        </div>
+
+        {% if not result or not result.id %}
+        <div class="bubble bot notice-bubble">
+            <i class="fas fa-exclamation-circle"></i> <em>Note: Make a prediction first on your dashboard if you want me to automatically import your live academic metrics into your plans!</em>
+        </div>
+        {% endif %}
+
+        <!-- Render Existing Chat Log History -->
+        {% if chat_history %}
+            {% for message in chat_history %}
+                <div class="bubble {% if message.is_user %}user{% else %}bot{% endif %}">
+                    {{ message.content | safe }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- Always Enabled User Control Input Panel -->
+    <div class="chat-input">
+        <input id="aiMsg" type="text" placeholder="Ask for study, timetable, attendance, or wellness advice..." autocomplete="off">
+        <button id="aiSend" class="btn btn-primary" type="button">Send</button>
+    </div>
+</section>
+
+<style>
+    /* Layout Framework Tweaks */
+    .chat-log {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px;
+        max-height: 550px;
+        overflow-y: auto;
+        background: #fafafa;
+        border-radius: 8px;
+    }
+
+    /* Core Bubble Topography */
+    .bubble {
+        max-width: 80%;
+        padding: 14px 18px;
+        border-radius: 16px;
+        font-size: 14.5px;
+        line-height: 1.55;
+    }
+    .bubble.bot {
+        background: #ffffff;
+        color: #1e293b;
+        align-self: flex-start;
+        border-top-left-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        border: 1px solid #e2e8f0;
+    }
+    .bubble.user {
+        background: #3b82f6;
+        color: #ffffff;
+        align-self: flex-end;
+        border-top-right-radius: 4px;
+    }
+    .notice-bubble {
+        border-left: 4px solid #f59e0b !important;
+        background: #fffdf5 !important;
+    }
+
+    /* Suggestion Engine Elements */
+    .suggestion-header {
+        margin-top: 14px;
+        font-size: 12.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: #64748b;
+    }
+    .chip-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+    .prompt-chip {
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        padding: 8px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: transform 0.1s ease, all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .prompt-chip:hover {
+        background: #e0f2fe;
+        border-color: #7dd3fc;
+        color: #0369a1;
+        transform: translateY(-1px);
+    }
+
+    /* Structured Layout Engine for AI Timetables and Cards */
+    .ai-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+    }
+    .ai-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 12px;
+    }
+    .ai-card-title {
+        font-weight: 600;
+        color: #0f172a;
+        font-size: 13.5px;
+        margin-bottom: 4px;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 4px;
+    }
+    .bubble {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const inputField = document.getElementById("aiMsg");
+        const sendButton = document.getElementById("aiSend");
+        const chatLog = document.getElementById("chatLog");
+
+        // Focus text bar on initialization
+        inputField.focus();
+
+        // Execution path handler
+        function executeSubmit() {
+            const query = inputField.value.trim();
+            if (!query) return;
+
+            // Render User Bubble
+            appendBubble(query, 'user');
+            inputField.value = "";
+            
+            // Render temporary processing bubble
+            const loadingId = "loader-" + Date.now();
+            appendLoadingBubble(loadingId);
+
+            // Fetch transaction pipeline
+            fetch("/chatbot", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: query })
+            })
+            
+.then(async res => {
+    const data = await res.json();
+
+    document.getElementById(loadingId)?.remove();
+
+    if (!res.ok) {
+        appendBubble(
+            data.response || data.error || "The AI service returned an error. Check the Flask terminal.",
+            "bot"
+        );
+        console.error("Chatbot API error:", res.status, data);
+        return;
+    }
+
+    if (typeof data.response !== "string" || !data.response.trim()) {
+        console.error("Unexpected chatbot response:", data);
+        appendBubble("The AI service returned an empty or unexpected response. Check the Flask backend.", "bot");
+        return;
+    }
+
+    appendBubble(data.response, "bot");
+})
+.catch(err => {
+    console.error("Chatbot request failed:", err);
+    document.getElementById(loadingId)?.remove();
+    appendBubble("⚠️ Could not communicate with the AI service. Check your Flask terminal.", "bot");
+});
+
+        function appendBubble(text, agent) {
+            const bubble = document.createElement("div");
+            bubble.className = `bubble ${agent}`;
+            bubble.innerHTML = text; // Assumes markdown-to-html or safe tags from back-end
+            chatLog.appendChild(bubble);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        function appendLoadingBubble(id) {
+            const bubble = document.createElement("div");
+            bubble.className = "bubble bot";
+            bubble.id = id;
+            bubble.innerHTML = `<span class="muted"><i class="fas fa-spinner fa-spin"></i> Processing data structural map...</span>`;
+            chatLog.appendChild(bubble);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        window.quickPrompt = function(payloadText) {
+            inputField.value = payloadText;
+            executeSubmit();
+        };
+
+        sendButton.addEventListener("click", executeSubmit);
+        inputField.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                executeSubmit();
+            }
+        });
+    });
+</script>
+{% endblock %}

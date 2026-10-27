@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+.venv/
+instance/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+static/graph.png
+static/graph_*.png
+static/graph_*.html

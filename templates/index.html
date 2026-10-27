@@ -1,0 +1,426 @@
+
+{% extends "base.html" %}
+
+{% block title %}Predict Student Performance | EduAI{% endblock %}
+
+{% block content %}
+<style>
+    .predict-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 28px 20px;
+    }
+
+    .predict-header {
+        margin-bottom: 28px;
+    }
+
+    .predict-header h1 {
+        color: #172554;
+        font-size: 30px;
+        margin-bottom: 8px;
+    }
+
+    .predict-header p {
+        color: #64748b;
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    .predict-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 5px 20px rgba(15, 23, 42, 0.05);
+        margin-bottom: 24px;
+    }
+
+    .section-title {
+        color: #172554;
+        font-size: 19px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .section-description {
+        color: #64748b;
+        font-size: 14px;
+        margin-bottom: 24px;
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form-group label {
+        color: #334155;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 9px;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 15px;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        border-color: #7c3aed;
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+    }
+
+    .field-help {
+        color: #94a3b8;
+        font-size: 12px;
+    }
+
+    .error-message {
+        padding: 14px 16px;
+        border: 1px solid #fecaca;
+        background: #fef2f2;
+        color: #b91c1c;
+        border-radius: 10px;
+        margin-bottom: 22px;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 28px;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 20px;
+        border-radius: 9px;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.15s, opacity 0.15s;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .btn-primary {
+        background: #6d28d9;
+        color: #ffffff;
+    }
+
+    .btn-primary:hover {
+        background: #5b21b6;
+    }
+
+    .btn-secondary {
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+    }
+
+    .btn:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .notice {
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: #f5f3ff;
+        border: 1px solid #ddd6fe;
+        color: #5b21b6;
+        font-size: 13px;
+        margin-bottom: 22px;
+    }
+
+    @media (max-width: 650px) {
+        .predict-container {
+            padding: 20px 12px;
+        }
+
+        .predict-card {
+            padding: 20px;
+        }
+
+        .metrics-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .predict-header h1 {
+            font-size: 25px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .btn {
+            width: 100%;
+            box-sizing: border-box;
+        }
+    }
+</style>
+
+<div class="predict-container">
+    <div class="predict-header">
+        <h1>
+            {% if edit_id %}
+                Edit Student Metrics
+            {% else %}
+                Student Performance Prediction
+            {% endif %}
+        </h1>
+
+        <p>
+            {% if edit_id %}
+                Update the previously submitted metrics and generate a new prediction.
+            {% else %}
+                Enter the student's academic and personal learning metrics to estimate performance.
+            {% endif %}
+        </p>
+    </div>
+
+    {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    {% if edit_id %}
+        <div class="notice">
+            Your previous metrics should appear below. Make any changes you need, then submit the form.
+        </div>
+    {% endif %}
+
+    {# Convert list-based saved data into a dictionary if the route has not already done so. #}
+    {% set field_names = [
+        'Attendance',
+        'StudyHours',
+        'InternetUsage',
+        'SleepHours',
+        'PreviousMarks',
+        'AssignmentScore',
+        'ClassParticipation',
+        'ParentalSupport',
+        'ExtraActivities'
+    ] %}
+
+    {% if values is mapping %}
+        {% set form_values = values %}
+    {% elif values is sequence and values is not string %}
+        {% set form_values = dict(zip(field_names, values)) %}
+    {% else %}
+        {% set form_values = {} %}
+    {% endif %}
+
+    <form
+        id="predictForm"
+        action="{{ url_for('predict_page', edit=edit_id) if edit_id else url_for('predict_page') }}"
+        method="POST"
+    >
+        <div class="predict-card">
+            <div class="section-title">Academic and Learning Metrics</div>
+            <div class="section-description">
+                Enter values within the ranges shown for each metric.
+            </div>
+
+            <div class="metrics-grid">
+                <div class="form-group">
+                    <label for="Attendance">Attendance (%)</label>
+                    <input
+                        type="number"
+                        id="Attendance"
+                        name="Attendance"
+                        min="0"
+                        max="100"
+                        step="any"
+                        value="{{ form_values.get('Attendance', '') }}"
+                        placeholder="e.g. 85"
+                        required
+                    >
+                    <span class="field-help">Range: 0–100%</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="StudyHours">Study Hours per Day</label>
+                    <input
+                        type="number"
+                        id="StudyHours"
+                        name="StudyHours"
+                        min="0"
+                        max="24"
+                        step="any"
+                        value="{{ form_values.get('StudyHours', '') }}"
+                        placeholder="e.g. 4"
+                        required
+                    >
+                    <span class="field-help">Range: 0–24 hours</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="InternetUsage">Internet Usage (Hours per Day)</label>
+                    <input
+                        type="number"
+                        id="InternetUsage"
+                        name="InternetUsage"
+                        min="0"
+                        max="24"
+                        step="any"
+                        value="{{ form_values.get('InternetUsage', '') }}"
+                        placeholder="e.g. 3"
+                        required
+                    >
+                    <span class="field-help">Range: 0–24 hours</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="SleepHours">Sleep Hours per Day</label>
+                    <input
+                        type="number"
+                        id="SleepHours"
+                        name="SleepHours"
+                        min="0"
+                        max="24"
+                        step="any"
+                        value="{{ form_values.get('SleepHours', '') }}"
+                        placeholder="e.g. 8"
+                        required
+                    >
+                    <span class="field-help">Range: 0–24 hours</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="PreviousMarks">Previous Marks (%)</label>
+                    <input
+                        type="number"
+                        id="PreviousMarks"
+                        name="PreviousMarks"
+                        min="0"
+                        max="100"
+                        step="any"
+                        value="{{ form_values.get('PreviousMarks', '') }}"
+                        placeholder="e.g. 78"
+                        required
+                    >
+                    <span class="field-help">Range: 0–100%</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="AssignmentScore">Assignment Score (%)</label>
+                    <input
+                        type="number"
+                        id="AssignmentScore"
+                        name="AssignmentScore"
+                        min="0"
+                        max="100"
+                        step="any"
+                        value="{{ form_values.get('AssignmentScore', '') }}"
+                        placeholder="e.g. 90"
+                        required
+                    >
+                    <span class="field-help">Range: 0–100%</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="ClassParticipation">Class Participation</label>
+                    <input
+                        type="number"
+                        id="ClassParticipation"
+                        name="ClassParticipation"
+                        min="0"
+                        max="100"
+                        step="any"
+                        value="{{ form_values.get('ClassParticipation', '') }}"
+                        placeholder="e.g. 75"
+                        required
+                    >
+                    <span class="field-help">Use the scale expected by your model (commonly 0–100).</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="ParentalSupport">Parental Support</label>
+                    <select id="ParentalSupport" name="ParentalSupport" required>
+                        <option value="">Select support level</option>
+                        <option value="0" {% if form_values.get('ParentalSupport', '')|string == '0' %}selected{% endif %}>0 - Low</option>
+                        <option value="1" {% if form_values.get('ParentalSupport', '')|string == '1' %}selected{% endif %}>1 - Moderate</option>
+                        <option value="2" {% if form_values.get('ParentalSupport', '')|string == '2' %}selected{% endif %}>2 - High</option>
+                        <option value="3" {% if form_values.get('ParentalSupport', '')|string == '3' %}selected{% endif %}>3 - Very High</option>
+                    </select>
+                    <span class="field-help">Ensure these options match your model's training data.</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="ExtraActivities">Extra Activities</label>
+                    <select id="ExtraActivities" name="ExtraActivities" required>
+                        <option value="">Select an option</option>
+                        <option value="0" {% if form_values.get('ExtraActivities', '')|string == '0' %}selected{% endif %}>0 - No</option>
+                        <option value="1" {% if form_values.get('ExtraActivities', '')|string == '1' %}selected{% endif %}>1 - Yes</option>
+                    </select>
+                    <span class="field-help">Ensure these options match your model's training data.</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                {% if edit_id %}
+                    <a
+                        class="btn btn-secondary"
+                        href="{{ url_for('result_page', prediction_id=edit_id) }}"
+                    >
+                        Cancel
+                    </a>
+                {% else %}
+                    <a
+                        class="btn btn-secondary"
+                        href="{{ url_for('dashboard') }}"
+                    >
+                        Cancel
+                    </a>
+                {% endif %}
+
+                <button class="btn btn-primary" id="submitBtn" type="submit">
+                    {% if edit_id %}
+                        Update Prediction
+                    {% else %}
+                        Predict Performance
+                    {% endif %}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.getElementById("predictForm").addEventListener("submit", function () {
+        const button = document.getElementById("submitBtn");
+        button.disabled = true;
+        button.textContent = "Processing...";
+    });
+</script>
+{% endblock %}

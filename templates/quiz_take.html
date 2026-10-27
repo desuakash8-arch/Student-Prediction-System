@@ -1,0 +1,510 @@
+
+{% extends "base.html" %}
+{% block title %}Take Quiz — EduAI{% endblock %}
+{% block page_title %}Your AI Quiz{% endblock %}
+{% block page_subtitle %}Test your knowledge and track your progress{% endblock %}
+
+{% block content %}
+<style>
+.quiz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.quiz-timer {
+    background: #f3f0ff;
+    color: #6545c5;
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-size: 20px;
+    font-weight: 800;
+}
+.quiz-question {
+    margin: 18px 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 22px;
+    background: #fff;
+}
+.quiz-question h3 {
+    font-size: 17px;
+    margin: 0 0 14px;
+}
+.quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    margin: 8px 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+}
+.quiz-option:has(input:checked) {
+    border-color: #7865df;
+    background: #f5f3ff;
+}
+.quiz-option input {
+    accent-color: #7865df;
+}
+.quiz-score-hero {
+    padding: 28px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #f5f3ff, #eef2ff);
+    text-align: center;
+    margin: 20px 0;
+}
+.quiz-score-number {
+    font-size: clamp(42px, 7vw, 64px);
+    line-height: 1.2;
+    font-weight: 800;
+    color: #6545c5;
+    margin: 8px 0;
+}
+.quiz-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin: 20px 0;
+}
+.quiz-stat {
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+}
+.quiz-stat span {
+    display: block;
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+.quiz-stat strong {
+    font-size: 27px;
+}
+.quiz-progress-track {
+    height: 10px;
+    background: #e5e7eb;
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 12px;
+}
+.quiz-progress-fill {
+    height: 100%;
+    background: #7865df;
+    border-radius: 99px;
+    transition: width .4s ease;
+}
+.answer-card {
+    border: 1px solid #e5e7eb;
+    border-left: 5px solid #9ca3af;
+    border-radius: 12px;
+    padding: 18px;
+    margin: 14px 0;
+    background: #fff;
+}
+.answer-card.correct {
+    border-left-color: #16a34a;
+}
+.answer-card.incorrect {
+    border-left-color: #dc2626;
+}
+.answer-status {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+.correct .answer-status {
+    color: #166534;
+    background: #dcfce7;
+}
+.incorrect .answer-status {
+    color: #991b1b;
+    background: #fee2e2;
+}
+.answer-line {
+    margin: 8px 0;
+    line-height: 1.6;
+}
+.answer-explanation {
+    margin-top: 14px;
+    padding: 13px 15px;
+    border-radius: 9px;
+    background: #f8fafc;
+    color: #475569;
+    line-height: 1.65;
+}
+.quiz-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+}
+.quiz-actions a {
+    text-decoration: none;
+}
+@media (max-width: 600px) {
+    .quiz-stats {
+        grid-template-columns: 1fr;
+    }
+    .quiz-stat {
+        padding: 15px;
+    }
+}
+</style>
+
+<section class="card card-pad">
+    <div class="quiz-header">
+        <div>
+            <h2 id="quizSubject">Loading quiz...</h2>
+            <p id="quizProgress" class="muted">Preparing questions</p>
+        </div>
+        <div id="quizTimer" class="quiz-timer">--:--</div>
+    </div>
+
+   <div id="quizError" class="alert alert-error" hidden></div>
+
+
+<div id="quizContent"></div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:20px">
+    <button id="submitQuizBtn" class="btn btn-primary"
+            type="button" disabled>
+        Submit Quiz
+    </button>
+
+    <button id="add5Btn" class="btn" type="button">
+        + Add 5 Questions
+    </button>
+
+    <button id="add10Btn" class="btn" type="button">
+        + Add 10 Questions
+    </button>
+</div>
+
+
+    <section id="quizResult" hidden>
+        <div class="quiz-score-hero">
+            <p class="muted">QUIZ COMPLETED</p>
+            <h2>Your Results</h2>
+            <div id="scoreNumber" class="quiz-score-number">0%</div>
+            <p id="scoreMessage">Keep learning and improving!</p>
+            <div class="quiz-progress-track">
+                <div id="scoreProgress" class="quiz-progress-fill"
+                     style="width:0%"></div>
+            </div>
+        </div>
+
+        <div class="quiz-stats">
+            <div class="quiz-stat">
+                <span>Correct answers</span>
+                <strong id="correctCount">0</strong>
+            </div>
+            <div class="quiz-stat">
+                <span>Incorrect answers</span>
+                <strong id="incorrectCount">0</strong>
+            </div>
+            <div class="quiz-stat">
+                <span>Total questions</span>
+                <strong id="totalCount">0</strong>
+            </div>
+        </div>
+
+        <h2>Answer Review</h2>
+        <p class="muted">Review each question and learn from your mistakes.</p>
+        <div id="answerReview"></div>
+
+        <div class="quiz-actions">
+            <a href="{{ url_for('quiz_page') }}" class="btn btn-primary">
+                Retry / Create Another Quiz
+            </a>
+            <a href="{{ url_for('dashboard') }}" class="btn">
+                Back to Dashboard
+            </a>
+        </div>
+    </section>
+</section>
+
+<script>
+(() => {
+    const content = document.getElementById("quizContent");
+    const error = document.getElementById("quizError");
+    const submitBtn = document.getElementById("submitQuizBtn");
+    const timerDisplay = document.getElementById("quizTimer");
+    const resultSection = document.getElementById("quizResult");
+
+    let quiz = null;
+    let answers = {};
+    let remainingSeconds = 0;
+    let timerId = null;
+    let submitted = false;
+
+    function showError(message) {
+        error.textContent = message;
+        error.hidden = false;
+    }
+function renderQuiz(questionsToRender = quiz.questions) {
+    document.getElementById("quizSubject").textContent = quiz.subject;
+
+    questionsToRender.forEach((question) => {
+        const index = quiz.questions.findIndex(
+            item => item.id === question.id
+        );
+            const card = document.createElement("div");
+            card.className = "quiz-question";
+
+            const heading = document.createElement("h3");
+            heading.textContent = `Question ${index + 1}: ${question.question}`;
+            card.appendChild(heading);
+
+            question.options.forEach((option, optionIndex) => {
+                const label = document.createElement("label");
+                label.className = "quiz-option";
+
+                const radio = document.createElement("input");
+                radio.type = "radio";
+                radio.name = `question-${question.id}`;
+                radio.value = optionIndex;
+
+                radio.addEventListener("change", () => {
+                    answers[String(question.id)] = optionIndex;
+                    updateProgress();
+                });
+
+                label.append(radio, document.createTextNode(option));
+                card.appendChild(label);
+            });
+
+            content.appendChild(card);
+        });
+
+        submitBtn.disabled = false;
+        updateProgress();
+    }
+    
+    async function addQuestions(count) {
+        if (submitted) return;
+
+        const add5Btn = document.getElementById("add5Btn");
+        const add10Btn = document.getElementById("add10Btn");
+
+        add5Btn.disabled = true;
+        add10Btn.disabled = true;
+        error.hidden = true;
+
+        try {
+            const response = await fetch(
+                "{{ url_for('add_quiz_questions') }}",
+                {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({count})
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Could not add questions.");
+            }
+
+            quiz.questions.push(...data.questions);
+            quiz.duration = data.duration;
+
+            // Extend the running timer by the added minutes.
+            remainingSeconds += count * 60;
+            updateProgress();
+            renderQuiz(data.questions);
+
+            sessionStorage.setItem(
+                "eduaiActiveQuiz",
+                JSON.stringify(quiz)
+            );
+        } catch (err) {
+            showError(err.message || "Could not add questions.");
+        } finally {
+            add5Btn.disabled = false;
+            add10Btn.disabled = false;
+        }
+    }
+
+    document.getElementById("add5Btn").addEventListener(
+        "click", () => addQuestions(5)
+    );
+
+    document.getElementById("add10Btn").addEventListener(
+        "click", () => addQuestions(10)
+    );
+
+  function updateProgress() {
+    document.getElementById("quizProgress").textContent =
+        `${Object.keys(answers).length} of ${quiz.questions.length} answered`;
+}
+
+    function updateTimer() {
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+
+        timerDisplay.textContent =
+            `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+        if (remainingSeconds <= 0) {
+            clearInterval(timerId);
+            submitQuiz();
+            return;
+        }
+
+        remainingSeconds--;
+
+        if (remainingSeconds < 60) {
+            timerDisplay.style.background = "#fee2e2";
+            timerDisplay.style.color = "#991b1b";
+        }
+    }
+
+    async function submitQuiz() {
+        if (submitted) return;
+        submitted = true;
+
+        clearInterval(timerId);
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Checking answers...";
+        error.hidden = true;
+
+        try {
+            const response = await fetch("{{ url_for('submit_quiz') }}", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({answers})
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Could not submit quiz.");
+            }
+
+            content.hidden = true;
+            submitBtn.hidden = true;
+            timerDisplay.hidden = true;
+            resultSection.hidden = false;
+
+            const percentage = Number(data.score) || 0;
+            const correct = Number(data.correct) || 0;
+            const total = Number(data.total) || quiz.questions.length;
+            const incorrect = total - correct;
+
+            document.getElementById("scoreNumber").textContent =
+                `${percentage}%`;
+
+            document.getElementById("scoreProgress").style.width =
+                `${Math.max(0, Math.min(100, percentage))}%`;
+
+            document.getElementById("correctCount").textContent = correct;
+            document.getElementById("incorrectCount").textContent = incorrect;
+            document.getElementById("totalCount").textContent = total;
+
+            let message = "Good effort! Review your answers and try again.";
+            if (percentage >= 90) message = "Excellent work! You have mastered this quiz.";
+            else if (percentage >= 70) message = "Great job! You have a strong understanding.";
+            else if (percentage >= 50) message = "Good progress! A little more practice will help.";
+            document.getElementById("scoreMessage").textContent = message;
+
+            const reviewContainer = document.getElementById("answerReview");
+            reviewContainer.replaceChildren();
+
+            data.review.forEach((item, index) => {
+                const question = quiz.questions[index];
+                const card = document.createElement("article");
+                card.className = `answer-card ${item.correct ? "correct" : "incorrect"}`;
+
+                const status = document.createElement("span");
+                status.className = "answer-status";
+                status.textContent = item.correct ? "✓ Correct" : "✕ Incorrect";
+                card.appendChild(status);
+
+                const heading = document.createElement("h3");
+                heading.textContent = `Question ${index + 1}`;
+                card.appendChild(heading);
+
+                const questionText = document.createElement("p");
+                questionText.className = "answer-line";
+                questionText.textContent = question.question;
+                card.appendChild(questionText);
+
+                const yourAnswer = document.createElement("p");
+                yourAnswer.className = "answer-line";
+
+                const selectedIndex = answers[String(question.id)];
+                const selectedText = selectedIndex === undefined
+                    ? "Not answered"
+                    : question.options[selectedIndex];
+
+                yourAnswer.textContent = `Your answer: ${selectedText}`;
+                card.appendChild(yourAnswer);
+
+                const correctAnswer = document.createElement("p");
+                correctAnswer.className = "answer-line";
+                correctAnswer.textContent =
+                    `Correct answer: ${question.options[item.correct_index]}`;
+                card.appendChild(correctAnswer);
+
+                if (item.explanation) {
+                    const explanation = document.createElement("div");
+                    explanation.className = "answer-explanation";
+
+                    const label = document.createElement("strong");
+                    label.textContent = "Explanation: ";
+
+                    explanation.append(label, document.createTextNode(item.explanation));
+                    card.appendChild(explanation);
+                }
+
+                reviewContainer.appendChild(card);
+            });
+
+            sessionStorage.removeItem("eduaiActiveQuiz");
+        } catch (err) {
+            submitted = false;
+            showError(err.message || "Submission failed.");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Try submitting again";
+        }
+    }
+
+    try {
+        quiz = {{ retry_quiz | tojson if retry else "null" }};
+
+if (!quiz) {
+    quiz = JSON.parse(
+        sessionStorage.getItem("eduaiActiveQuiz") || "null"
+    );
+}
+
+        if (!quiz || !Array.isArray(quiz.questions) || !quiz.questions.length) {
+            throw new Error("No quiz found. Please return to quiz settings.");
+        }
+
+        remainingSeconds = Math.max(0, Number(quiz.duration) * 60);
+
+        if (!Number.isFinite(remainingSeconds) || remainingSeconds <= 0) {
+            throw new Error("Invalid quiz duration. Please create the quiz again.");
+        }
+
+        renderQuiz();
+        updateTimer();
+        timerId = setInterval(updateTimer, 1000);
+    } catch (err) {
+        showError(err.message);
+        submitBtn.hidden = true;
+    }
+
+    submitBtn.addEventListener("click", submitQuiz);
+})();
+</script>
+{% endblock %}

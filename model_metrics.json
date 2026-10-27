@@ -1,0 +1,12 @@
+{
+  "n_samples": 1000,
+  "test_mae": 3.9153,
+  "test_rmse": 4.9617,
+  "test_r2": 0.744,
+  "cv_splits": 5,
+  "cv_r2_mean": 0.7239,
+  "cv_r2_std": 0.0178,
+  "cv_mae_mean": 3.9155,
+  "cv_rmse_mean": 4.867,
+  "model": "RandomForestRegressor"
+}

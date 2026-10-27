@@ -1,0 +1,258 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}EduAI{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/app.css') }}">
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+{% set nav = active_nav|default('') %}
+
+<div class="app" id="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+
+        <div class="brand">
+            <button
+                class="brand-mark"
+                id="sidebarToggle"
+                type="button"
+                onclick="toggleSidebar()"
+                aria-label="Toggle sidebar"
+                aria-controls="sidebar"
+                aria-expanded="true">
+                E
+            </button>
+
+            <span class="brand-name">EduAI</span>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="nav-list" aria-label="Main navigation">
+
+            <a
+                class="nav-item {% if nav == 'dashboard' %}active{% endif %}"
+                href="{{ url_for('dashboard') }}">
+                Dashboard
+            </a>
+
+            <a
+                class="nav-item {% if nav == 'predict' %}active{% endif %}"
+                href="{{ url_for('predict_page') }}">
+                Predict
+            </a>
+
+            <a
+                class="nav-item {% if request.endpoint == 'history_page' %}active{% endif %}"
+                href="{{ url_for('history_page') }}">
+                History
+            </a>
+
+            <!-- Assistant page route is not yet defined in app.py -->
+
+            <a
+                class="nav-item {% if request.endpoint == 'quiz_page' %}active{% endif %}"
+                href="{{ url_for('quiz_page') }}">
+                AI Quiz Builder
+            </a>
+
+            <a
+               class="nav-item {% if request.endpoint in ['quiz_history_page', 'quiz_attempt_detail'] %}active{% endif %}"
+                href="{{ url_for('quiz_history_page') }}">
+                Quiz History
+            </a>
+
+<a href="{{ url_for('chatbot_page') }}" class="nav-item {% if request.endpoint == 'chatbot_page' %}active{% endif %}">
+
+    <span>EduAI Assistant</span>
+</a>
+        </nav>
+
+        <!-- User information -->
+        <div class="sidebar-user">
+            <div class="user-meta">
+                <strong>{{ current_username or 'Student' }}</strong>
+                <span>Signed in</span>
+            </div>
+
+            <a class="logout-link" href="{{ url_for('logout') }}">
+                Logout
+            </a>
+        </div>
+
+    </aside>
+
+    <!-- Mobile backdrop -->
+    <div
+        class="overlay"
+        id="sidebarOverlay"
+        onclick="toggleSidebar(false)"
+        aria-hidden="true">
+    </div>
+
+    <!-- E logo shown when desktop sidebar is collapsed -->
+    <button
+        class="collapsed-logo"
+        id="collapsedLogo"
+        type="button"
+        onclick="toggleSidebar(true)"
+        aria-label="Open sidebar"
+        aria-controls="sidebar"
+        title="Open sidebar">
+        E
+    </button>
+
+    <!-- Main content -->
+    <div class="app-main">
+
+        <header class="topbar">
+            <div class="topbar-heading">
+                <strong>
+                    {% block page_title %}Overview{% endblock %}
+                </strong>
+
+                <div class="muted topbar-subtitle">
+                    {% block page_subtitle %}
+                        Student performance analytics
+                    {% endblock %}
+                </div>
+            </div>
+
+            {% block top_actions %}{% endblock %}
+        </header>
+
+        <main class="page">
+            {% block content %}{% endblock %}
+        </main>
+
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Application JavaScript -->
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+<!-- Sidebar controls -->
+<script>
+(function () {
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebarOverlay");
+    const toggle = document.getElementById("sidebarToggle");
+    const collapsedLogo = document.getElementById("collapsedLogo");
+
+    if (!sidebar || !toggle || !collapsedLogo) return;
+
+    function isMobile() {
+        return window.matchMedia("(max-width: 768px)").matches;
+    }
+
+    function updateButtons(open) {
+        toggle.setAttribute("aria-expanded", String(open));
+        collapsedLogo.setAttribute("aria-expanded", String(open));
+
+        collapsedLogo.style.display =
+            !isMobile() && !open ? "grid" : "none";
+    }
+
+    window.toggleSidebar = function (forceState) {
+        const mobile = isMobile();
+
+        const currentlyOpen = mobile
+            ? sidebar.classList.contains("mobile-open")
+            : !document.body.classList.contains("sidebar-collapsed");
+
+        const shouldOpen =
+            typeof forceState === "boolean"
+                ? forceState
+                : !currentlyOpen;
+
+        if (mobile) {
+            sidebar.classList.toggle("mobile-open", shouldOpen);
+            document.body.classList.remove("sidebar-collapsed");
+
+            if (overlay) {
+                overlay.classList.toggle("show", shouldOpen);
+                overlay.setAttribute(
+                    "aria-hidden",
+                    String(!shouldOpen)
+                );
+            }
+        } else {
+            sidebar.classList.remove("mobile-open");
+
+            document.body.classList.toggle(
+                "sidebar-collapsed",
+                !shouldOpen
+            );
+
+            if (overlay) {
+                overlay.classList.remove("show");
+                overlay.setAttribute("aria-hidden", "true");
+            }
+        }
+
+        updateButtons(shouldOpen);
+    };
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && isMobile()) {
+            window.toggleSidebar(false);
+        }
+    });
+
+    window.addEventListener("resize", function () {
+        if (isMobile()) {
+            document.body.classList.remove("sidebar-collapsed");
+            sidebar.classList.remove("mobile-open");
+
+            if (overlay) {
+                overlay.classList.remove("show");
+                overlay.setAttribute("aria-hidden", "true");
+            }
+
+            updateButtons(false);
+        } else {
+            sidebar.classList.remove("mobile-open");
+
+            if (overlay) {
+                overlay.classList.remove("show");
+                overlay.setAttribute("aria-hidden", "true");
+            }
+
+            updateButtons(
+                !document.body.classList.contains("sidebar-collapsed")
+            );
+        }
+    });
+
+    updateButtons(
+        isMobile()
+            ? false
+            : !document.body.classList.contains("sidebar-collapsed")
+    );
+})();
+</script>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,835 @@
+
+{% extends "base.html" %}
+{% block title %}Result — EduAI{% endblock %}
+{% block page_title %}Prediction result{% endblock %}
+{% block page_subtitle %}Your academic performance overview{% endblock %}
+
+
+{% block top_actions %}
+<div style="display:flex; align-items:center; justify-content:flex-end; gap:12px; width:100%;">
+    <a class="btn btn-secondary" href="{{ url_for('dashboard') }}">Home</a>
+    <a class="btn btn-primary" href="{{ url_for('predict_page') }}">New prediction</a>
+</div>
+{% endblock %}
+
+
+{% block content %}
+{% set data = result.data %}
+{% set score = result.prediction|float %}
+{% set safe_score = [[score, 0]|max, 100]|min %}
+{% set circ = 439.82 %}
+{% set dash = (safe_score / 100) * circ %}
+
+{% set metrics = [
+    ("Attendance", data[0], "%"),
+    ("Study hours", data[1], "hrs"),
+    ("Internet usage", data[2], "hrs"),
+    ("Sleep hours", data[3], "hrs"),
+    ("Previous marks", data[4], "%"),
+    ("Assignment score", data[5], "%"),
+    ("Participation", data[6], "/10"),
+    ("Parental support", data[7], ""),
+    ("Extra activities", data[8], "")
+] %}
+
+<style>
+.result-page {
+    display: grid;
+    gap: 20px;
+}
+
+.result-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr);
+    gap: 20px;
+}
+
+.result-score-card {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 30px;
+    min-height: 240px;
+}
+
+.result-gauge {
+    position: relative;
+    width: 168px;
+    height: 168px;
+    flex: 0 0 168px;
+}
+
+.result-gauge svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+    overflow: visible;
+}
+
+.result-gauge circle {
+    fill: none;
+    stroke-width: 12;
+}
+
+.result-gauge .track {
+    stroke: #e8edf5;
+}
+
+.result-gauge .progress {
+    stroke: #5145e5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease;
+}
+
+.result-gauge-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.result-gauge-center strong {
+    color: #172033;
+    font-size: 31px;
+    line-height: 1.2;
+}
+
+.result-gauge-center span {
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.result-score-details {
+    min-width: 0;
+}
+
+.result-eyebrow {
+    color: #64748b;
+    font-size: 13px;
+    margin: 0 0 8px;
+}
+
+.result-category {
+    color: #172033;
+    font-size: 28px;
+    margin: 0 0 12px;
+}
+
+.result-date {
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 14px;
+    overflow-wrap: anywhere;
+}
+
+.result-summary-card {
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.result-summary-card h3 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    color: #172033;
+}
+
+.result-summary-card p {
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.7;
+    margin: 0 0 18px;
+}
+
+.result-progress-track {
+    height: 12px;
+    width: 100%;
+    background: #e8edf5;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.result-progress-fill {
+    height: 100%;
+    width: 0;
+    background: #5145e5;
+    border-radius: 20px;
+}
+
+.result-progress-labels {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.result-section {
+    padding: 25px;
+    min-width: 0;
+}
+
+.result-section-heading {
+    margin-bottom: 20px;
+}
+
+.result-section-heading h3 {
+    color: #172033;
+    font-size: 19px;
+    margin: 0 0 6px;
+}
+
+.result-section-heading p {
+    color: #64748b;
+    font-size: 13px;
+    margin: 0;
+}
+
+.result-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.result-metric {
+    padding: 18px;
+    border: 1px solid #e5eaf3;
+    border-radius: 14px;
+    background: #fff;
+    min-width: 0;
+}
+
+.result-metric span {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    margin-bottom: 9px;
+}
+
+.result-metric strong {
+    display: block;
+    color: #172033;
+    font-size: 21px;
+    overflow-wrap: anywhere;
+}
+
+.result-lower-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+    gap: 20px;
+    align-items: stretch;
+}
+
+.result-recommendation {
+    display: flex;
+    gap: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid #e5eaf3;
+    background: #fbfcff;
+    border-radius: 13px;
+}
+
+.result-recommendation:last-child {
+    margin-bottom: 0;
+}
+
+.result-tip-number {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: #eef2ff;
+    color: #5145e5;
+    font-weight: 700;
+}
+
+.result-tip-content {
+    min-width: 0;
+}
+
+.result-tip-content h4 {
+    color: #172033;
+    font-size: 14px;
+    margin: 1px 0 6px;
+}
+
+.result-tip-content p {
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.result-metric-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 23px;
+    margin-top: 24px;
+}
+
+.result-metric-bar-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 9px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.result-metric-bar-heading strong {
+    color: #172033;
+    white-space: nowrap;
+}
+
+.result-metric-bar .result-progress-track {
+    height: 11px;
+}
+
+.result-metric-bar .result-progress-fill {
+    background: linear-gradient(90deg, #5145e5, #818cf8);
+}
+
+.result-assistant-action {
+    margin-top: 28px;
+}
+
+@media (max-width: 900px) {
+    .result-overview,
+    .result-lower-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .result-metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .result-score-card {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 22px;
+        gap: 18px;
+    }
+
+    .result-section,
+    .result-summary-card {
+        padding: 18px;
+    }
+
+    .result-metrics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .result-metric {
+        padding: 15px;
+    }
+
+    .result-progress-labels {
+        font-size: 10px;
+    }
+}
+</style>
+
+<div class="result-page">
+
+    <!-- Prediction score overview -->
+    <div class="result-overview">
+
+        <article class="card result-score-card">
+            <div class="result-gauge">
+                <svg viewBox="0 0 180 180" aria-hidden="true">
+                    <circle
+                        class="track"
+                        cx="90"
+                        cy="90"
+                        r="70">
+                    </circle>
+
+                    <circle
+                        class="progress"
+                        cx="90"
+                        cy="90"
+                        r="70"
+                        stroke-dasharray="{{ circ }}"
+                        stroke-dashoffset="{{ circ - dash }}">
+                    </circle>
+                </svg>
+
+                <div class="result-gauge-center">
+                    <strong>{{ '%.1f'|format(score) }}%</strong>
+                    <span>Predicted score</span>
+                </div>
+            </div>
+
+            <div class="result-score-details">
+                <p class="result-eyebrow">Performance category</p>
+
+                <h2 class="result-category">
+                    {{ result.category }}
+                </h2>
+
+                <span class="badge {{ result.category_tone }}">
+                    {{ result.category }}
+                </span>
+
+                {% if result.created_at %}
+                <p class="result-date">
+                    Generated {{ result.created_at }}
+                </p>
+                {% endif %}
+            </div>
+        </article>
+
+        <section class="card result-summary-card">
+            <h3>Performance overview</h3>
+
+            <p>
+                Your predicted academic performance is
+                {{ '%.1f'|format(score) }}%.
+                Review your submitted metrics and recommendations
+                to identify areas for improvement.
+            </p>
+
+            <div
+                class="result-progress-track"
+                role="progressbar"
+                aria-label="Predicted score"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="{{ safe_score }}">
+
+                <div
+                    class="result-progress-fill"
+                    style="width: {{ safe_score }}%;">
+                </div>
+            </div>
+
+            <div class="result-progress-labels">
+                <span>0%</span>
+                <span>{{ '%.1f'|format(safe_score) }}% achieved</span>
+                <span>100%</span>
+            </div>
+        </section>
+
+    </div>
+
+   
+<!-- All nine submitted metrics -->
+<section class="card result-section">
+    <div class="result-section-heading" style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+        <div>
+            <h3>Submitted metrics</h3>
+            <p>A breakdown of the information used for this prediction.</p>
+        </div>
+
+        <button type="button" class="btn btn-primary" onclick="openEditModal()">
+    Edit Metrics
+</button>
+    </div>
+
+    <!-- Keep your existing nine metrics grid below this line -->
+</section>
+
+
+        <div class="result-metrics-grid">
+            {% for name, value, unit in metrics %}
+            <article class="result-metric">
+                <span>{{ name }}</span>
+
+                <strong>
+                    {% if name in ["Parental support", "Extra activities"] %}
+                        {{ "Yes" if value|float == 1 else "No" }}
+                    {% elif unit == "%" %}
+                        {{ '%.1f'|format(value|float) }}%
+                    {% elif unit == "/10" %}
+                        {{ value }}/10
+                    {% else %}
+                        {{ value }} {{ unit }}
+                    {% endif %}
+                </strong>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Recommendations and metric analysis -->
+    <div class="result-lower-grid">
+
+        <section class="card result-section">
+            <div class="result-section-heading">
+                <h3>Recommendations</h3>
+                <p>Practical actions based on your prediction.</p>
+            </div>
+
+            {% for tip in result.suggestions %}
+            <article class="result-recommendation">
+                <div class="result-tip-number">
+                    {{ loop.index }}
+                </div>
+
+                <div class="result-tip-content">
+                    <h4>{{ tip }}</h4>
+
+                    <p>
+                        {% if "attendance" in tip|lower %}
+                            Prioritize regular class participation to support your academic progress.
+                        {% elif "study" in tip|lower %}
+                            Build a consistent daily study block and keep it interruption-free.
+                        {% elif "internet" in tip|lower %}
+                            Limit non-academic screen time during focused study hours.
+                        {% elif "sleep" in tip|lower %}
+                            Protect a stable sleep schedule to support concentration.
+                        {% elif "assignment" in tip|lower %}
+                            Improve assignment completion and review feedback before assessments.
+                        {% else %}
+                            Continue building habits that support your learning and academic progress.
+                        {% endif %}
+                    </p>
+                </div>
+            </article>
+
+            {% else %}
+            <p class="muted">
+                No recommendations are available for this result.
+            </p>
+            {% endfor %}
+        </section>
+
+        <!-- Replaces the old pie chart -->
+        <section class="card result-section">
+            <div class="result-section-heading">
+                <h3>Input analysis</h3>
+                <p>Explore your submitted academic metrics.</p>
+            </div>
+
+            {% set bar_metrics = [
+                ("Attendance", data[0], "%", 100),
+                ("Previous marks", data[4], "%", 100),
+                ("Assignment score", data[5], "%", 100),
+                ("Participation", data[6], "/10", 10)
+            ] %}
+
+            <div class="result-metric-bars">
+                {% for name, value, unit, maximum in bar_metrics %}
+                {% set percentage = [[(value|float / maximum * 100), 0]|max, 100]|min %}
+
+                <div class="result-metric-bar">
+                    <div class="result-metric-bar-heading">
+                        <span>{{ name }}</span>
+
+                        <strong>
+                            {% if unit == "%" %}
+                                {{ '%.1f'|format(value|float) }}%
+                            {% else %}
+                                {{ value }}{{ unit }}
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="result-progress-track">
+                        <div
+                            class="result-progress-fill"
+                            style="width: {{ percentage }}%;">
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="result-assistant-action">
+                <a
+                    class="btn btn-primary"
+                    href="{{ url_for('chatbot') }}">
+                    Ask EduAI Assistant
+                </a>
+            </div>
+        </section>
+
+    </div>
+</div>
+```html
+<style>
+    .edit-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(15, 23, 42, 0.65);
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+    }
+
+    .edit-modal.show {
+        display: flex;
+    }
+
+    .edit-modal-content {
+        width: 100%;
+        max-width: 760px;
+        max-height: 90vh;
+        overflow-y: auto;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 26px;
+        box-sizing: border-box;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    }
+
+    .edit-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 22px;
+    }
+
+    .edit-modal-header h2 {
+        color: #172554;
+        margin: 0;
+        font-size: 23px;
+    }
+
+    .edit-close {
+        border: none;
+        background: #f1f5f9;
+        color: #334155;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+    .edit-fields {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+    }
+
+    .edit-field label {
+        display: block;
+        color: #334155;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 7px;
+    }
+
+    .edit-field input,
+    .edit-field select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 11px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+    }
+
+    .edit-field input:focus,
+    .edit-field select:focus {
+        outline: 2px solid #ddd6fe;
+        border-color: #7c3aed;
+    }
+
+    .edit-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 25px;
+        flex-wrap: wrap;
+    }
+
+    .edit-actions button {
+        border: none;
+        border-radius: 8px;
+        padding: 12px 18px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .edit-cancel {
+        background: #f1f5f9;
+        color: #334155;
+    }
+
+    .edit-save {
+        background: #6d28d9;
+        color: white;
+    }
+
+    @media (max-width: 600px) {
+        .edit-fields {
+            grid-template-columns: 1fr;
+        }
+
+        .edit-modal-content {
+            padding: 18px;
+        }
+    }
+</style>
+
+<div class="edit-modal" id="editMetricsModal" aria-hidden="true">
+    <div
+        class="edit-modal-content"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="editModalTitle"
+    >
+        <div class="edit-modal-header">
+            <h2 id="editModalTitle">Edit Student Metrics</h2>
+            <button
+                type="button"
+                class="edit-close"
+                onclick="closeEditModal()"
+                aria-label="Close"
+            >&times;</button>
+        </div>
+
+        <p style="color:#64748b;font-size:14px;margin-bottom:22px;">
+            Update your previously entered values and recalculate your prediction.
+        </p>
+
+        <form
+            method="POST"
+            action="{{ url_for('predict_page', edit=result.id) }}"
+            id="editMetricsForm"
+        >
+            <div class="edit-fields">
+                <div class="edit-field">
+                    <label for="editAttendance">Attendance (%)</label>
+                    <input type="number" id="editAttendance"
+                        name="Attendance"
+                        value="{{ result.data[0] if result.data else '' }}"
+                        min="0" max="100" step="any" required>
+                </div>
+
+                <div class="edit-field">
+                    <label for="editStudyHours">Study Hours</label>
+                    <input type="number" id="editStudyHours"
+                        name="StudyHours"
+                        value="{{ result.data[1] if result.data else '' }}"
+                        min="0" max="24" step="any" required>
+                </div>
+
+                <div class="edit-field">
+                    <label for="editInternetUsage">Internet Usage (hours)</label>
+                    <input type="number" id="editInternetUsage"
+                        name="InternetUsage"
+                        value="{{ result.data[2] if result.data else '' }}"
+                        min="0" max="24" step="any" required>
+                </div>
+
+                <div class="edit-field">
+                    <label for="editSleepHours">Sleep Hours</label>
+                    <input type="number" id="editSleepHours"
+                        name="SleepHours"
+                        value="{{ result.data[3] if result.data else '' }}"
+                        min="0" max="24" step="any" required>
+                </div>
+
+                <div class="edit-field">
+                    <label for="editPreviousMarks">Previous Marks (%)</label>
+                    <input type="number" id="editPreviousMarks"
+                        name="PreviousMarks"
+                        value="{{ result.data[4] if result.data else '' }}"
+                        min="0" max="100" step="any" required>
+                </div>
+
+                <div class="edit-field">
+                    <label for="editAssignmentScore">Assignment Score (%)</label>
+                    <input type="number" id="editAssignmentScore"
+                        name="AssignmentScore"
+                        value="{{ result.data[5] if result.data else '' }}"
+                        min="0" max="100" step="any" required>
+                </div>
+
+                <div class="edit-field">
+                    <label for="editParticipation">Class Participation</label>
+                    <input type="number" id="editParticipation"
+                        name="ClassParticipation"
+                        value="{{ result.data[6] if result.data else '' }}"
+                        min="0" max="100" step="any" required>
+                </div>
+
+                <div class="edit-field">
+                    <label for="editParentalSupport">Parental Support</label>
+                    <input type="number" id="editParentalSupport"
+                        name="ParentalSupport"
+                        value="{{ result.data[7] if result.data else '' }}"
+                        min="0" max="3" step="1" required>
+                </div>
+
+            
+<div class="edit-field">
+    <label for="editExtraActivities">Extra Activities</label>
+    <select id="editExtraActivities" name="ExtraActivities" required>
+        <option value="0"
+            {% if result.data[8]|string == '0' %}selected{% endif %}>
+            No
+        </option>
+        <option value="1"
+            {% if result.data[8]|string == '1' %}selected{% endif %}>
+            Yes
+        </option>
+    </select>
+</div>
+            </div>
+
+            <div class="edit-actions">
+                <button type="button" class="edit-cancel"
+                    onclick="closeEditModal()">
+                    Cancel
+                </button>
+
+                <button type="submit" class="edit-save">
+                    Save &amp; Recalculate
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEditModal() {
+        const modal = document.getElementById("editMetricsModal");
+        modal.classList.add("show");
+        modal.setAttribute("aria-hidden", "false");
+        document.getElementById("editAttendance").focus();
+    }
+
+    function closeEditModal() {
+        const modal = document.getElementById("editMetricsModal");
+        modal.classList.remove("show");
+        modal.setAttribute("aria-hidden", "true");
+    }
+
+    document.getElementById("editMetricsModal").addEventListener(
+        "click",
+        function (event) {
+            if (event.target === this) {
+                closeEditModal();
+            }
+        }
+    );
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeEditModal();
+        }
+    });
+</script>
+
+{% endblock %}

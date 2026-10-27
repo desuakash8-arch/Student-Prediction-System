@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quiz Review | EduAI</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 30px 18px;
+            background: #f4f6fb;
+            color: #172033;
+            font-family: Arial, sans-serif;
+        }
+        main { max-width: 850px; margin: auto; }
+        .card {
+            background: white;
+            padding: 22px;
+            margin: 16px 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 13px;
+        }
+        .muted { color: #64748b; }
+        .correct { border-left: 5px solid #16a34a; }
+        .incorrect { border-left: 5px solid #dc2626; }
+        .btn {
+            display: inline-block;
+            padding: 10px 15px;
+            border-radius: 8px;
+            background: #4f46e5;
+            color: white;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <a class="btn" href="{{ url_for('quiz_history_page') }}">← Quiz History</a>
+
+    <div class="card">
+        <h1>{{ attempt.subject }}</h1>
+        <p class="muted">{{ topics | join(", ") }}</p>
+        <p>Difficulty: <strong>{{ attempt.difficulty }}</strong></p>
+        <h2>{{ "%.1f"|format(attempt.score) }}%</h2>
+        <p>{{ attempt.correct_answers }} correct out of {{ attempt.total_questions }}</p>
+        <p class="muted">{{ attempt.created_at.strftime("%d %b %Y, %I:%M %p") }}</p>
+    </div>
+
+    <h2>Answer Review</h2>
+    {% for item in review %}
+    <div class="card {{ 'correct' if item.correct else 'incorrect' }}">
+        <h3>Question {{ loop.index }}</h3>
+        <p>
+            <strong>
+                {{ "Correct" if item.correct else "Incorrect or unanswered" }}
+            </strong>
+        </p>
+        <p>Correct option: {{ ["A", "B", "C", "D"][item.correct_index] }}</p>
+        {% if item.explanation %}
+        <p class="muted">{{ item.explanation }}</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</main>
+</body>
+</html>

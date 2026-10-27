@@ -1,0 +1,187 @@
+
+{% extends "base.html" %}
+
+{% block title %}Quiz History — EduAI{% endblock %}
+{% block page_title %}Quiz History{% endblock %}
+{% block page_subtitle %}Track your recent quiz performance and past attempts{% endblock %}
+
+{% block top_actions %}
+<a class="btn btn-primary" href="{{ url_for('quiz_page') }}">
+    Open Quiz Builder
+</a>
+{% endblock %}
+
+{% block content %}
+
+{% if history %}
+
+<!-- Recent Quiz Performance Graph -->
+<section class="card history-chart-card">
+    <h3>Recent 5 Quiz Attempts</h3>
+    <p class="muted">Track your quiz scores over time.</p>
+
+    <div class="history-chart-container">
+        <canvas id="quizHistoryChart"></canvas>
+    </div>
+</section>
+
+<!-- Full Quiz History Table -->
+<section class="card">
+    <h3>All Quiz Attempts</h3>
+
+    <div class="table-wrap">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Date / Time</th>
+                    <th>Subject</th>
+                    <th>Difficulty</th>
+                    <th>Questions</th>
+                    <th>Correct</th>
+                    <th>Score</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for item in history %}
+                <tr>
+                    <td>{{ item.created_at or "—" }}</td>
+                    <td>{{ item.subject }}</td>
+                    <td>{{ item.difficulty }}</td>
+                    <td>{{ item.total }}</td>
+                    <td>{{ item.correct }}</td>
+                    <td>
+                        <strong>{{ item.score }}%</strong>
+                    </td>
+                    <td>
+                        <a
+                            class="btn btn-secondary"
+                            href="{{ url_for('quiz_attempt_detail', attempt_id=item.id) }}"
+                        >
+                            View
+                        </a>
+                        <form
+    method="POST"
+    action="{{ url_for('retry_quiz', attempt_id=item.id) }}"
+    style="display:inline"
+>
+    <button class="btn btn-primary" type="submit">
+        Retry
+    </button>
+</form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+</section>
+
+{% else %}
+
+<!-- Empty Quiz History -->
+<section class="card">
+    <div class="empty">
+        <h3>No Quiz Attempts Yet</h3>
+        <p>Complete a quiz to see your scores and performance graph here.</p>
+
+        <div style="margin-top: 14px;">
+            <a class="btn btn-primary" href="{{ url_for('quiz_page') }}">
+                Start a Quiz
+            </a>
+        </div>
+    </div>
+</section>
+
+{% endif %}
+
+<!-- Quiz History Chart -->
+{% if history %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const canvas = document.getElementById("quizHistoryChart");
+
+    if (!canvas || typeof Chart === "undefined") {
+        console.error("Quiz history graph could not load. Check Chart.js in base.html.");
+        return;
+    }
+
+    const labels = {{ chart_labels | default([], true) | tojson }};
+    const scores = {{ chart_scores | default([], true) | tojson }};
+
+    if (!labels.length || !scores.length) {
+        console.warn("No quiz chart data available.");
+        return;
+    }
+
+    new Chart(canvas, {
+        type: "line",
+
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Quiz Score (%)",
+                data: scores,
+                borderColor: "#0d9488",
+                backgroundColor: "rgba(13, 148, 136, 0.12)",
+                borderWidth: 3,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: "#0d9488",
+                pointBorderColor: "#ffffff",
+                pointBorderWidth: 2
+            }]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+
+            interaction: {
+                intersect: false,
+                mode: "index"
+            },
+
+            plugins: {
+                legend: {
+                    display: true,
+                    position: "top"
+                },
+
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return "Score: " + context.parsed.y + "%";
+                        }
+                    }
+                }
+            },
+
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: "Quiz Score (%)"
+                    }
+                },
+
+                x: {
+                    title: {
+                        display: true,
+                        text: "Quiz Attempt Date"
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+
+{% endblock %}
